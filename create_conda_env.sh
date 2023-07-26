@@ -44,6 +44,9 @@ fi
 # Remove existing version of this environment.
 conda remove -y -n "${CONDA_ENV_NAME}" --all
 
+# Remove existing version of fetch-block-construction package.
+rm -rf ./src/fetch-block-construction
+
 # Create environment from YAML.
 conda env create -f ./conda_env.yml
 if [ $? -ne 0 ]; then
@@ -57,6 +60,9 @@ if [ $? -ne 0 ]; then
     echo "Failed to activate $CONDA_ENV_NAME conda environment."
     exit 1
 fi
+
+# Add additional assets.
+cp ./visual_block_builder/assets/simplified_robot.xml ./src/fetch-block-construction/fetch_block_construction/envs/robotics/assets/fetch/
 
 # Install the Python package.
 pip install -e .
