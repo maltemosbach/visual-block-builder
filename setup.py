@@ -9,7 +9,7 @@ setup(
             "cython<3",
             "fetch-block-construction",
             "gym<=0.17.3",
-            "mujoco-py<=2.0.2.8", 
+            "mujoco-py", 
             "opencv-python",
             "pynput",
             "tabulate",

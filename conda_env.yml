@@ -9,7 +9,7 @@ dependencies:
     - cython<3
     - -e git+https://github.com/richardrl/fetch-block-construction.git@6375141c785c4267e0ac80744ea05e11e22303b3#egg=fetch_block_construction
     - gym<=0.17.3
-    - mujoco-py<=2.0.2.8 
+    - mujoco-py 
     - opencv-python
     - pynput
     - tabulate

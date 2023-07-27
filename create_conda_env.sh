@@ -17,7 +17,7 @@ fi
 source $HOME/.bashrc
 ENVIRONMENT_VARIABLES_ADDED=false
 for path in "${MUJOCO_LD_PATHS[@]}"; do
-    if [ -z "$LD_LIBRARY_PATH" ] || [[ $LD_LIBRARY_PATH != *"$path"* ]]; then
+    if [[ -z "$LD_LIBRARY_PATH" ]] || [[ $LD_LIBRARY_PATH != *"$path"* ]]; then
         if [ "$ENVIRONMENT_VARIABLES_ADDED" = false ]; then
             echo "# >>> The following lines were added by visual-block-builder/create_conda_env.sh >>>" >> $HOME/.bashrc
             ENVIRONMENT_VARIABLES_ADDED=true
@@ -25,6 +25,13 @@ for path in "${MUJOCO_LD_PATHS[@]}"; do
         echo "export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:$path" >> $HOME/.bashrc
     fi
 done
+if [[ -z "$MUJOCO_PY_MUJOCO_PATH" ]] || [[ $MUJOCO_PY_MUJOCO_PATH != "$HOME/.mujoco/mujoco210" ]]; then
+    if [ "$ENVIRONMENT_VARIABLES_ADDED" = false ]; then
+            echo "# >>> The following lines were added by visual-block-builder/create_conda_env.sh >>>" >> $HOME/.bashrc
+            ENVIRONMENT_VARIABLES_ADDED=true
+    fi
+    echo "export MUJOCO_PY_MUJOCO_PATH=$HOME/.mujoco/mujoco210" >> $HOME/.bashrc
+fi
 
 if [ "$ENVIRONMENT_VARIABLES_ADDED"=true ]; then
     echo "# <<< End of lines added by visual-block-builder/create_conda_env.sh <<<" >> $HOME/.bashrc
