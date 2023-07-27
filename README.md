@@ -2,14 +2,12 @@
 
 Visual RL environments for multi-object manipulation and block construction with a Fetch robot. 
 
-<table>
-  <tr>
-    <td><img src="media/sample_environment_1.png"></td>
-    <td><img src="media/sample_environment_2.png"></td>
-    <td><img src="media/sample_environment_3.png"></td>
-    <td><img src="media/sample_environment_4.png"></td>
-  </tr> 
-</table>
+<p align="center">
+  <img width="24.0%" src="media/sample_environment_1.png">
+  <img width="24.0%" src="media/sample_environment_2.png">
+  <img width="24.0%" src="media/sample_environment_3.png">
+  <img width="24.0%" src="media/sample_environment_4.png">
+</p>
 
 ## Installation
 The easiest way to install is to use the provided `create_conda_env.sh` script. This creates a conda environment called `vbb` with all the necessary dependencies, sets up MuJoCo and copies asset files.
