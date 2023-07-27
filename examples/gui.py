@@ -45,9 +45,9 @@ class GUI:
         for key in self._keys_pressed:
             try:
                 action += action_scale * ACTION_MAPPING[key.char]
-            except AttributeError:
+            except:
                 try:
                     action += action_scale * ACTION_MAPPING[key]
-                except KeyError:
+                except:
                     pass
         return action

@@ -10,8 +10,8 @@ from visual_block_builder.assets.generate_multi_camera_xml import generate_multi
 
 class VisualBlockBuilderEnv(FetchBlockConstructionEnv):
     def __init__(self, initial_qpos: Dict[str, Any], num_blocks: int = 1, reward_type: str = "incremental",
-                    obs_type: str = "np", stack_only: bool = False, case: str = "Singletower", viewpoint: str = "topview",
-                    width: int = 512, height: int = 512) -> None:
+                    obs_type: str = "np", stack_only: bool = False, case: str = "Singletower", viewpoint: str = "topview", 
+                    robot: str = "default", width: int = 1024, height: int = 1024) -> None:
         self.num_blocks = num_blocks
         self.object_names = ['object{}'.format(i) for i in range(self.num_blocks)]
         self.stack_only = stack_only
@@ -25,7 +25,7 @@ class VisualBlockBuilderEnv(FetchBlockConstructionEnv):
         # MODEL_XML_PATH = os.path.join('fetch', F'stack{self.num_blocks}.xml')
 
         with tempfile.NamedTemporaryFile(mode='wt', dir=pkg_resources.resource_filename('fetch_block_construction', 'envs/robotics/assets/fetch'), delete=False, suffix=".xml") as fp:
-            fp.write(generate_multi_camera_xml(self.num_blocks))
+            fp.write(generate_multi_camera_xml(self.num_blocks, robot))
             MODEL_XML_PATH = fp.name
 
         fetch_env.FetchEnv.__init__(

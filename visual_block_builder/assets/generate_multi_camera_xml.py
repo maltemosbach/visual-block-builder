@@ -1,7 +1,8 @@
 from fetch_block_construction.envs.robotics.fetch.colors import get_colors
 BASIC_COLORS = ["0 1 0", "1 1 0", "0.2 0.8 0.8", "0.8 0.2 0.8", "1.0 0.0 0.0", "0 0 0"]
 
-base = '''<?xml version="1.0" encoding="utf-8"?>
+base = '''
+<?xml version="1.0" encoding="utf-8"?>
 <mujoco>
     <compiler angle="radian" coordinate="local" meshdir="../stls/fetch" texturedir="../textures"></compiler>
     <option timestep="0.002">
@@ -22,7 +23,7 @@ base = '''<?xml version="1.0" encoding="utf-8"?>
 
         </body>
 
-        <include file="simplified_robot.xml"></include>
+        <include file="{robot_file}.xml"></include>
 
         <-- Add additional cameras -->
         <body name="frontview_camera_body" pos="0 0 0">
@@ -46,10 +47,9 @@ base = '''<?xml version="1.0" encoding="utf-8"?>
         <position ctrllimited="true" ctrlrange="0 0.2" joint="robot0:r_gripper_finger_joint" kp="30000" name="robot0:r_gripper_finger_joint" user="1"></position>
     </actuator>
 </mujoco>
-
 '''
 
-def generate_multi_camera_xml(num_blocks):
+def generate_multi_camera_xml(num_blocks: int, robot: str):
     if num_blocks <= 6:
         colors = BASIC_COLORS[:num_blocks]
     else:
@@ -62,6 +62,8 @@ def generate_multi_camera_xml(num_blocks):
     </body>'''
     asset_base = '<material name="block{id}_mat" specular="0" shininess="0.5" reflectance="0" rgba="{color} 1"></material>'
 
+    robot_file = "simplified_robot" if robot == "simplified" else "robot"
+
     sites = []
     block_bodies = []
     assets = []
@@ -70,4 +72,4 @@ def generate_multi_camera_xml(num_blocks):
         block_bodies.append(block_base.format(**dict(id=i)))
         assets.append(asset_base.format(**dict(id=i, color=colors[i])))
 
-    return base.format(**dict(assets="\n".join(assets), target_sites="\n".join(sites), object_bodies="\n".join(block_bodies)))
+    return base.format(**dict(assets="\n".join(assets), target_sites="\n".join(sites), robot_file=robot_file, object_bodies="\n".join(block_bodies)))

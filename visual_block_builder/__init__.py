@@ -10,28 +10,30 @@ for num_blocks in range(1, 25):
             for stack_only in [True, False]:
                 for case in ["Singletower", "Pyramid", "Multitower", "All"]:
                     for viewpoint in ["frontview", "topview", "external_camera_0"]:
-                        initial_qpos = {
-                            'robot0:slide0': 0.405,
-                            'robot0:slide1': 0.48,
-                            'robot0:slide2': 0.0,
-                            'object0:joint': [1.25, 0.53, 0.4, 1., 0., 0., 0.],
-                        }
+                        for robot in ["default", "simplified"]:
+                            initial_qpos = {
+                                'robot0:slide0': 0.405,
+                                'robot0:slide1': 0.48,
+                                'robot0:slide2': 0.0,
+                                'object0:joint': [1.25, 0.53, 0.4, 1., 0., 0., 0.],
+                            }
 
-                        for i in range(num_blocks):
-                            initial_qpos[F"object{i}:joint"] = [1.25, 0.53, .4 + i*.06, 1., 0., 0., 0.]
-                        kwargs = {
-                            'reward_type': reward_type,
-                            'initial_qpos': initial_qpos,
-                            'num_blocks': num_blocks,
-                            'obs_type': obs_type,
-                            'stack_only': stack_only,
-                            'case': case,
-                            'viewpoint': viewpoint
-                        }
+                            for i in range(num_blocks):
+                                initial_qpos[F"object{i}:joint"] = [1.25, 0.53, .4 + i*.06, 1., 0., 0., 0.]
+                            kwargs = {
+                                'reward_type': reward_type,
+                                'initial_qpos': initial_qpos,
+                                'num_blocks': num_blocks,
+                                'obs_type': obs_type,
+                                'stack_only': stack_only,
+                                'case': case,
+                                'viewpoint': viewpoint,
+                                'robot': robot,
+                            }
 
-                        register(
-                            id='VisualBlockBuilder_{}Blocks_{}Reward_{}Obs_{}Stackonly_{}Case_{}Viewpoint-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [num_blocks, reward_type, obs_type, stack_only, case, viewpoint]]),
-                            entry_point='visual_block_builder.env:VisualBlockBuilderEnv',
-                            kwargs=kwargs,
-                            max_episode_steps=50 * num_blocks,
-                        )
+                            register(
+                                id='VisualBlockBuilder_{}Blocks_{}Reward_{}Obs_{}Stackonly_{}Case_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [num_blocks, reward_type, obs_type, stack_only, case, viewpoint, robot]]),
+                                entry_point='visual_block_builder.env:VisualBlockBuilderEnv',
+                                kwargs=kwargs,
+                                max_episode_steps=50 * num_blocks,
+                            )
