@@ -6,6 +6,8 @@ class VBBParser(argparse.ArgumentParser):
         super().__init__()
 
         # Add VBB envrionment arguments.
+        self.add_argument("--task", type=str, choices=["VisualBlockBuilder", "ReachSpecificTarget"], default="VisualBlockBuilder",
+                          help="The task to look at.")
         self.add_argument("--case", type=str, choices=["Singletower", "Pyramid", "Multitower", "All"], default="Singletower",
                           help="The case to run. Must be one of 'Singletower', 'Pyramid', 'Multitower', or 'All'.")
         self.add_argument("--num_blocks", type=int, default=2,

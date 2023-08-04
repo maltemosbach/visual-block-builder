@@ -13,8 +13,13 @@ parser.add_argument("--policy", type=str, choices=["random", "user"], default="r
                     help="The policy used to control the robot. 'user' for interactive keyboard control, and 'random' for a random policy.")
 args = parser.parse_args()
 
-# Create VBB environment.
-env = gym.make(f'VisualBlockBuilder_{args.num_blocks}Blocks_SparseReward_DictstateObs_{args.stack_only}Stackonly_{args.case}Case_{args.viewpoint.title()}Viewpoint{args.robot.title()}Robot-v1')
+# Create environment.
+
+if args.task == "VisualBlockBuilder":
+    env = gym.make(f'VisualBlockBuilder_{args.num_blocks}Blocks_SparseReward_DictstateObs_{args.stack_only}Stackonly_{args.case}Case_{args.viewpoint.title()}Viewpoint{args.robot.title()}Robot-v1')
+else:
+    env = gym.make(f'ReachSpecificTarget_{args.num_blocks}Distractors_DenseReward_DictstateObs_{args.viewpoint.title()}Viewpoint{args.robot.title()}Robot-v1')
+
 env.render(mode='rgb_array')
 
 gui = GUI(fps=env.metadata['video.frames_per_second'])
