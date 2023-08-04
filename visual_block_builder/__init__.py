@@ -42,26 +42,28 @@ for num_blocks in range(1, 25):
 for num_distractors in range(1, 25):
     for reward_type in ['sparse', 'dense']:
         for obs_type in ['dictimage', 'np', 'dictstate']:
-            for viewpoint in ["frontview", "topview", "external_camera_0"]:
-                for robot in ["default", "simplified"]:
-                    initial_qpos = {
-                        'robot0:slide0': 0.405,
-                        'robot0:slide1': 0.48,
-                        'robot0:slide2': 0.0,
-                    }
+            for case in ["Specific", "Distinct"]:
+                for viewpoint in ["frontview", "topview", "external_camera_0"]:
+                    for robot in ["default", "simplified"]:
+                        initial_qpos = {
+                            'robot0:slide0': 0.405,
+                            'robot0:slide1': 0.48,
+                            'robot0:slide2': 0.0,
+                        }
 
-                    kwargs = {
-                        'reward_type': reward_type,
-                        'initial_qpos': initial_qpos,
-                        'num_distractors': num_distractors,
-                        'obs_type': obs_type,
-                        'viewpoint': viewpoint,
-                        'robot': robot,
-                    }
+                        kwargs = {
+                            'reward_type': reward_type,
+                            'initial_qpos': initial_qpos,
+                            'num_distractors': num_distractors,
+                            'obs_type': obs_type,
+                            'case': case,
+                            'viewpoint': viewpoint,
+                            'robot': robot,
+                        }
 
-                    register(
-                        id='ReachSpecificTarget_{}Distractors_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [num_distractors, reward_type, obs_type, viewpoint, robot]]),
-                        entry_point='visual_block_builder.env:ReachSpecificTargetEnv',
-                        kwargs=kwargs,
-                        max_episode_steps=200,
-                    )
+                        register(
+                            id='Reach{}Target_{}Distractors_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [case, num_distractors, reward_type, obs_type, viewpoint, robot]]),
+                            entry_point='visual_block_builder.env:ReachTargetEnv',
+                            kwargs=kwargs,
+                            max_episode_steps=2000,
+                        )

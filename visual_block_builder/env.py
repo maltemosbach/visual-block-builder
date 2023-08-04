@@ -47,14 +47,15 @@ class VisualBlockBuilderEnv(FetchBlockConstructionEnv):
         return data[::-1, :, :]
 
 
-class ReachSpecificTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
+class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def __init__(self, initial_qpos: Dict[str, Any], num_distractors: int = 1, reward_type: str = "sparse",
-                 obs_type: str = "np", viewpoint: str = "topview", robot: str = "default", width: int = 1024,
+                 obs_type: str = "np", case: str = "Specific", viewpoint: str = "topview", robot: str = "default", width: int = 1024,
                  height: int = 1024) -> None:
         self.num_distractors = num_distractors
         self.viewpoint = viewpoint
         self.width = width
         self.height = height
+        self.case = case
 
         with tempfile.NamedTemporaryFile(mode='wt', dir=pkg_resources.resource_filename('fetch_block_construction', 'envs/robotics/assets/fetch'), delete=False, suffix=".xml") as fp:
             fp.write(generate_multi_camera_xml(self.num_distractors, robot, vbb=False))
@@ -62,8 +63,8 @@ class ReachSpecificTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=False, block_gripper=True, n_substeps=20,
-            gripper_extra_height=0.2, target_in_the_air=False, target_offset=0.0,
-            obj_range=0.15, target_range=0.2, distance_threshold=0.02,
+            gripper_extra_height=0.2, target_in_the_air=False, target_offset=0,
+            obj_range=0, target_range=0, distance_threshold=0.035,
             initial_qpos=initial_qpos, reward_type=reward_type, obs_type=obs_type, render_size=0)
 
         os.remove(MODEL_XML_PATH)
@@ -97,9 +98,22 @@ class ReachSpecificTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 
     def _reset_sim(self):
         self.sim.set_state(self.initial_state)
-        sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
+
+        # Randomize color of target and distractors
+        if self.case == 'Distinct':
+            target_color = np.random.randint(0, 256, size=3)
+            self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = target_color / 255
+
+            same_color = True
+            while same_color:
+                distractor_color = np.random.randint(0, 256, size=3)
+                same_color = np.array_equal(target_color, distractor_color)
+
+            for i in range(self.num_distractors):
+                self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = distractor_color / 255
 
         # Randomize start position of distractors.
+        sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
         ball_positions = [self.goal]
         for i in range(self.num_distractors):
             pos_not_valid = True
