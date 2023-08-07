@@ -58,7 +58,7 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         self.case = case
 
         with tempfile.NamedTemporaryFile(mode='wt', dir=pkg_resources.resource_filename('fetch_block_construction', 'envs/robotics/assets/fetch'), delete=False, suffix=".xml") as fp:
-            fp.write(generate_multi_camera_xml(self.num_distractors, robot, vbb=False))
+            fp.write(generate_multi_camera_xml(self.num_distractors, robot, task='reach'))
             MODEL_XML_PATH = fp.name
 
         fetch_env.FetchEnv.__init__(
@@ -164,3 +164,86 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def compute_reward(self, achieved_goal, goal, info):
         distractor_dist = self.check_distractor_dist()
         return super().compute_reward(achieved_goal, goal, info) + distractor_dist
+
+
+class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
+    def __init__(self, initial_qpos: Dict[str, Any], reward_type='sparse', obs_type='np', render_size=42,
+                 num_blocks: int = 1, case: str = "Specific", viewpoint: str = "topview", robot: str = "default",
+                 width: int = 1024, height: int = 1024):
+
+        self.num_blocks = num_blocks
+        self.viewpoint = viewpoint
+        self.width = width
+        self.height = height
+        self.case = case
+        self.object_names = ['object{}'.format(i) for i in range(self.num_blocks)]
+
+        with tempfile.NamedTemporaryFile(mode='wt', dir=pkg_resources.resource_filename('fetch_block_construction', 'envs/robotics/assets/fetch'), delete=False, suffix=".xml") as fp:
+            fp.write(generate_multi_camera_xml(self.num_blocks, robot, task='pick_place'))
+            MODEL_XML_PATH = fp.name
+
+        fetch_env.FetchEnv.__init__(
+            self, MODEL_XML_PATH, has_object=True, block_gripper=False, n_substeps=20,
+            gripper_extra_height=0.2, target_in_the_air=True, target_offset=0.0,
+            obj_range=0.15, target_range=0.15, distance_threshold=0.05,
+            initial_qpos=initial_qpos, reward_type=reward_type, obs_type=obs_type, render_size=render_size)
+        gym_utils.EzPickle.__init__(self, reward_type, obs_type, render_size)
+
+        os.remove(MODEL_XML_PATH)
+
+    def render(self, mode='human', size=None):
+        self._render_callback()
+        data = self.sim.render(self.width, self.height, camera_name=self.viewpoint)
+        # original image is upside-down, so flip it
+        return data[::-1, :, :]
+
+    def _reset_sim(self):
+        assert self.num_blocks <= 17  # Cannot sample collision free block inits with > 17 blocks
+        self.sim.set_state(self.initial_state)
+
+        # Randomize color of objects
+        if self.case == 'Distinct':
+            target_object_color = np.random.randint(0, 256, size=3)
+            self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[1])][:3] = target_object_color / 255
+
+            same_color = True
+            while same_color:
+                distractor_object_color = np.random.randint(0, 256, size=3)
+                same_color = np.array_equal(target_object_color, distractor_object_color)
+
+            for object_name in self.object_names[1:]:
+                self.sim.model.geom_rgba[self.sim.model.geom_name2id(object_name)][:3] = distractor_object_color / 255
+
+        # Randomize start position of objects.
+
+        prev_obj_xpos = []
+
+        for obj_name in self.object_names:
+            object_xypos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
+                                                                                  size=2)
+
+            while not ((np.linalg.norm(object_xypos - self.initial_gripper_xpos[:2]) >= 0.1) and np.all(
+                    [np.linalg.norm(object_xypos - other_xpos) >= 0.06 for other_xpos in prev_obj_xpos])):
+                object_xypos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
+                                                                                      size=2)
+
+            prev_obj_xpos.append(object_xypos)
+
+            object_qpos = self.sim.data.get_joint_qpos(F"{obj_name}:joint")
+            assert object_qpos.shape == (7,)
+            object_qpos[:2] = object_xypos
+            object_qpos[2] = self.height_offset
+            self.sim.data.set_joint_qpos(F"{obj_name}:joint", object_qpos)
+            self.sim.forward()
+        return True
+
+    def _sample_goal(self):
+        if self.has_object:
+            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
+            goal += self.target_offset
+            goal[2] = self.height_offset
+            if self.target_in_the_air and self.np_random.uniform() < 0.5:
+                goal[2] += self.np_random.uniform(0, 0.3)
+        else:
+            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
+        return goal.copy()
