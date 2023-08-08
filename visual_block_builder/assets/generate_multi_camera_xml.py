@@ -34,7 +34,7 @@ base = '''
 		</body>
 
         <body pos="1.3 0.75 0.2" name="table0">
-            <geom size="0.25 0.35 0.2" type="box" mass="2000" material="table_mat"></geom>
+            <geom size="0.25 0.35 0.2" type="box" mass="2000" material="table_mat" name="table0"></geom>
         </body>
         
         {object_bodies}
@@ -49,12 +49,14 @@ base = '''
 </mujoco>
 '''
 
-def generate_multi_camera_xml(num_blocks: int, robot: str):
-    if num_blocks <= 6:
+def generate_multi_camera_xml(num_blocks: int, robot: str, task='vbb'):
+    if num_blocks <= (6 if not task == 'reach' else 5):
         colors = BASIC_COLORS[:num_blocks]
     else:
         colors = get_colors(num_blocks)
-    site_base = '<site name="target{id}" pos="0 0 0.5" size="0.02 0.02 0.02" rgba="{color} 0.3" type="sphere"></site>'
+
+    site_base = '<site name="target{id}" pos="0 0 0.5" size="0.02 0.02 0.02" rgba="{color} 0.3" type="sphere"></site>' \
+        if not task == 'reach' else '<site name="distractor{id}" pos="0 0 0.5" size="0.02 0.02 0.02" rgba="{color} 1" type="sphere"></site>'
     block_base = '''<body name="object{id}" pos="0.025 0.025 0.025">
         <joint name="object{id}:joint" type="free" damping="0.01"></joint>
         <geom size="0.025 0.025 0.025" type="box" condim="3" name="object{id}" material="block{id}_mat" mass="2"></geom>
@@ -67,9 +69,25 @@ def generate_multi_camera_xml(num_blocks: int, robot: str):
     sites = []
     block_bodies = []
     assets = []
-    for i in range(num_blocks):
-        sites.append(site_base.format(**dict(id=i, color=colors[i])))
-        block_bodies.append(block_base.format(**dict(id=i)))
-        assets.append(asset_base.format(**dict(id=i, color=colors[i])))
 
-    return base.format(**dict(assets="\n".join(assets), target_sites="\n".join(sites), robot_file=robot_file, object_bodies="\n".join(block_bodies)))
+    if task == 'reach':
+        sites.append('<site name="target0" pos="0 0 0.5" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>')
+        if "1.0 0.0 0.0" in colors:
+            colors.remove("1.0 0.0 0.0")
+        if "1 0 0" in colors:
+            colors.remove("1 0 0")
+
+    if task == 'pick_place':
+        sites.append('<site name="target0" pos="0 0 0.5" size="0.02 0.02 0.02" rgba="1 0 0 1" type="sphere"></site>')
+
+    for i in range(num_blocks):
+        if task == 'reach':
+            sites.append(site_base.format(**dict(id=i, color=colors[i])))
+        else:
+            if task == 'vbb':
+                sites.append(site_base.format(**dict(id=i, color=colors[i])))
+            block_bodies.append(block_base.format(**dict(id=i)))
+            assets.append(asset_base.format(**dict(id=i, color=colors[i])))
+
+    return base.format(**dict(assets="\n".join(assets), target_sites="\n".join(sites), robot_file=robot_file, object_bodies="\n".join(block_bodies))) \
+        if not task == 'reach' else base.format(**dict(assets="", target_sites="\n".join(sites), robot_file=robot_file, object_bodies=""))
