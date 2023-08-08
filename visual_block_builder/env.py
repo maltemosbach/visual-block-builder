@@ -75,22 +75,16 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         # original image is upside-down, so flip it
         return data[::-1, :, :]
 
-    def sample_pos_on_table(self, object_size):
-        return np.concatenate([self.np_random.uniform(-self.table_size[0] + object_size,
-                                                      self.table_size[0] - object_size - 0.1, size=1) + self.x_offset,
-                               self.np_random.uniform(-self.table_size[1] + object_size,
-                                                      self.table_size[1] - object_size, size=1) + self.y_offset,
-                               np.array([self.height_offset + self.table_size[2] + object_size])])
+    def sample_pos(self, object_size):
+        pos = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
+        pos[2] = self.height_offset + self.table_size[2] + object_size if pos[2] < self.height_offset + self.table_size[2] + object_size else pos[2]
+        return pos.copy()
 
     def _sample_goal(self):
-        goal = self.sample_pos_on_table(self.target_size)
-        goal += self.target_offset
-        return goal.copy()
+        return self.sample_pos(self.target_size)
 
     def _env_setup(self, initial_qpos):
         super()._env_setup(initial_qpos)
-        self.x_offset = self.sim.data.get_body_xpos('table0')[0]
-        self.y_offset = self.sim.data.get_body_xpos('table0')[1]
         self.height_offset = self.sim.data.get_body_xpos('table0')[2]
 
         self.target_size = self.sim.model.site_size[self.sim.model.site_name2id('target0')][0]
@@ -104,10 +98,10 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             target_color = np.random.randint(0, 256, size=3)
             self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = target_color / 255
 
-            same_color = True
-            while same_color:
+            color_dist = 0
+            while color_dist < 100:
                 distractor_color = np.random.randint(0, 256, size=3)
-                same_color = np.array_equal(target_color, distractor_color)
+                color_dist = np.linalg.norm(target_color - distractor_color)
 
             for i in range(self.num_distractors):
                 self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = distractor_color / 255
@@ -118,7 +112,7 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         for i in range(self.num_distractors):
             pos_not_valid = True
             while pos_not_valid:
-                distractor_xpos = self.sample_pos_on_table(self.target_size)
+                distractor_xpos = self.sample_pos(self.target_size)
 
                 pos_not_valid = False
                 for position in ball_positions:
@@ -153,7 +147,7 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         for i in range(self.num_distractors):
             if np.linalg.norm(
                     grip_pos.copy() - self.sim.data.get_site_xpos(f'distractor{i}').copy()) <= self.distance_threshold:
-                return -np.inf
+                return -10
 
         return 0
 
@@ -206,10 +200,10 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             target_object_color = np.random.randint(0, 256, size=3)
             self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[1])][:3] = target_object_color / 255
 
-            same_color = True
-            while same_color:
+            color_dist = 0
+            while color_dist < 100:
                 distractor_object_color = np.random.randint(0, 256, size=3)
-                same_color = np.array_equal(target_object_color, distractor_object_color)
+                color_dist = np.linalg.norm(target_object_color - distractor_object_color)
 
             for object_name in self.object_names[1:]:
                 self.sim.model.geom_rgba[self.sim.model.geom_name2id(object_name)][:3] = distractor_object_color / 255
@@ -222,8 +216,7 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             object_xypos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
                                                                                   size=2)
 
-            while not ((np.linalg.norm(object_xypos - self.initial_gripper_xpos[:2]) >= 0.1) and np.all(
-                    [np.linalg.norm(object_xypos - other_xpos) >= 0.06 for other_xpos in prev_obj_xpos])):
+            while not np.all([np.linalg.norm(object_xypos - other_xpos) >= 0.06 for other_xpos in prev_obj_xpos]):
                 object_xypos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
                                                                                       size=2)
 
@@ -238,12 +231,12 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         return True
 
     def _sample_goal(self):
-        if self.has_object:
+        goal = self.sim.data.get_joint_qpos(F"{self.object_names[0]}:joint")[:3]
+        object_positions = [self.sim.data.get_joint_qpos(F"{obj_name}:joint") for obj_name in self.object_names]
+        while not (np.all([np.linalg.norm(goal - other_xpos[:3]) >= 0.06 for other_xpos in object_positions])):
             goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
             goal += self.target_offset
             goal[2] = self.height_offset
             if self.target_in_the_air and self.np_random.uniform() < 0.5:
                 goal[2] += self.np_random.uniform(0, 0.3)
-        else:
-            goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-0.15, 0.15, size=3)
         return goal.copy()

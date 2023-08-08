@@ -39,7 +39,7 @@ for num_blocks in range(1, 25):
                             )
 
 
-for num_distractors in range(1, 25):
+for num_distractors in range(2, 18):
     for reward_type in ['sparse', 'dense']:
         for obs_type in ['dictimage', 'np', 'dictstate']:
             for case in ["Specific", "Distinct"]:
@@ -65,10 +65,10 @@ for num_distractors in range(1, 25):
                             id='Reach{}Target_{}Distractors_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [case, num_distractors, reward_type, obs_type, viewpoint, robot]]),
                             entry_point='visual_block_builder.env:ReachTargetEnv',
                             kwargs=kwargs,
-                            max_episode_steps=200,
+                            max_episode_steps=100,
                         )
 
-for num_blocks in range(1, 18):
+for num_blocks in range(3, 18):
     for reward_type in ['sparse', 'dense']:
         for obs_type in ['dictimage', 'np', 'dictstate']:
             for case in ["Specific", "Distinct"]:
@@ -98,5 +98,5 @@ for num_blocks in range(1, 18):
                             id='PickAndPlace{}Block_{}Blocks_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [case, num_blocks, reward_type, obs_type, viewpoint, robot]]),
                             entry_point='visual_block_builder.env:PickAndPlaceBlockEnv',
                             kwargs=kwargs,
-                            max_episode_steps=200,
+                            max_episode_steps=100,
                         )
