@@ -32,6 +32,11 @@ The following arguments are used to configure the environments and can be tested
 - `stack_only`: Enforces object-goals to form a single stack on the `Singletower` task.
 - `viewpoint`: Selects which viewpoint/camera to use and can be in `frontview` and `topview`, `external_camera_0`.
 
+The following arguments are used to configure the reach, and pick and place environments and can be tested in `examples/run_reach_task.py` and `examples/run_pick_place_task.py`:
+- `case`: Selects which task to run and can be in `Specific` and `Distinct`.
+- `num_distractors`: Number of distractor targets/blocks to use in the environment.
+- `robot`: Selects which robot to use and can be in `simplified` and `default`. On the simplified robot, all parts but the gripper are invisible to make the task visually less complex.
+- `viewpoint`: Selects which viewpoint/camera to use and can be in `frontview` and `topview`, `external_camera_0`.
 
 ## Credits
 This repository is an extension of the environments in [fetch-block-construction](https://github.com/richardrl/fetch-block-construction).

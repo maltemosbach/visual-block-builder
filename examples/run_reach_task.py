@@ -1,13 +1,13 @@
 from examples.gui import GUI
 import gym
-from examples.parser import ReachTargetParser
+from examples.parser import ReachPickPlaceTargetParser
 from tabulate import tabulate
 import tqdm
 import visual_block_builder
 
 
 # Parse environment arguments.
-parser = ReachTargetParser()
+parser = ReachPickPlaceTargetParser()
 parser.add_argument("--policy", type=str, choices=["random", "user"], default="random",
                     help="The policy used to control the robot. 'user' for interactive keyboard control, and 'random' for a random policy.")
 args = parser.parse_args()

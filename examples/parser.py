@@ -17,7 +17,7 @@ class VBBParser(argparse.ArgumentParser):
                           help="The viewpoint/camera to use for rendering.")
 
 
-class ReachTargetParser(argparse.ArgumentParser):
+class ReachPickPlaceTargetParser(argparse.ArgumentParser):
     def __init__(self) -> None:
         super().__init__()
 
