@@ -50,21 +50,22 @@ class VisualBlockBuilderEnv(FetchBlockConstructionEnv):
 class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def __init__(self, initial_qpos: Dict[str, Any], num_distractors: int = 1, reward_type: str = "sparse",
                  obs_type: str = "np", case: str = "Specific", viewpoint: str = "topview", robot: str = "default", width: int = 1024,
-                 height: int = 1024) -> None:
+                 height: int = 1024, target_size="small") -> None:
         self.num_distractors = num_distractors
         self.viewpoint = viewpoint
         self.width = width
         self.height = height
         self.case = case
+        self.target_size = {"small": 0.02, "medium": 0.04, "large": 0.06}[target_size]
 
         with tempfile.NamedTemporaryFile(mode='wt', dir=pkg_resources.resource_filename('fetch_block_construction', 'envs/robotics/assets/fetch'), delete=False, suffix=".xml") as fp:
-            fp.write(generate_multi_camera_xml(self.num_distractors, robot, task='reach'))
+            fp.write(generate_multi_camera_xml(self.num_distractors, robot, task='reach', target_size=self.target_size))
             MODEL_XML_PATH = fp.name
 
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=False, block_gripper=True, n_substeps=20,
             gripper_extra_height=0.2, target_in_the_air=False, target_offset=0,
-            obj_range=0, target_range=0, distance_threshold=0.035,
+            obj_range=0, target_range=0, distance_threshold=self.target_size + 0.015,
             initial_qpos=initial_qpos, reward_type=reward_type, obs_type=obs_type, render_size=0)
 
         os.remove(MODEL_XML_PATH)
@@ -86,8 +87,6 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def _env_setup(self, initial_qpos):
         super()._env_setup(initial_qpos)
         self.height_offset = self.sim.data.get_body_xpos('table0')[2]
-
-        self.target_size = self.sim.model.site_size[self.sim.model.site_name2id('target0')][0]
         self.table_size = self.sim.model.geom_size[self.sim.model.geom_name2id('table0')]
 
     def _reset_sim(self):
