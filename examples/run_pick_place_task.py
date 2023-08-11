@@ -13,7 +13,7 @@ parser.add_argument("--policy", type=str, choices=["random", "user"], default="r
 args = parser.parse_args()
 
 # Create environment.
-env = gym.make(f'PickAndPlace{args.case}Block_{args.num_distractors + 1}Blocks_SparseReward_DictstateObs_{args.viewpoint.title()}Viewpoint{args.robot.title()}Robot-v1')
+env = gym.make(f'PickAndPlace{args.case}Block_{args.num_distractors + 1}Blocks_{args.target_size.title()}Target_{args.object_size.title()}Objects_SparseReward_DictstateObs_{args.viewpoint.title()}Viewpoint{args.robot.title()}Robot-v1')
 env.render(mode='rgb_array')
 
 gui = GUI(fps=env.metadata['video.frames_per_second'])

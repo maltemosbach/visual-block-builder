@@ -56,7 +56,7 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         self.width = width
         self.height = height
         self.case = case
-        self.target_size = {"small": 0.02, "medium": 0.04, "large": 0.06}[target_size]
+        self.target_size = {"small": 0.02, "medium": 0.03, "large": 0.04}[target_size]
 
         with tempfile.NamedTemporaryFile(mode='wt', dir=pkg_resources.resource_filename('fetch_block_construction', 'envs/robotics/assets/fetch'), delete=False, suffix=".xml") as fp:
             fp.write(generate_multi_camera_xml(self.num_distractors, robot, task='reach', target_size=self.target_size))
@@ -162,7 +162,7 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def __init__(self, initial_qpos: Dict[str, Any], reward_type='sparse', obs_type='np', render_size=42,
                  num_blocks: int = 1, case: str = "Specific", viewpoint: str = "topview", robot: str = "default",
-                 width: int = 1024, height: int = 1024):
+                 width: int = 1024, height: int = 1024, target_size="small", object_size="small"):
 
         self.num_blocks = num_blocks
         self.viewpoint = viewpoint
@@ -170,15 +170,17 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         self.height = height
         self.case = case
         self.object_names = ['object{}'.format(i) for i in range(self.num_blocks)]
+        self.target_size = {"small": 0.02, "medium": 0.03, "large": 0.04}[target_size]
+        self.object_size = {"small": 0.025, "medium": 0.035, "large": 0.045}[object_size]
 
         with tempfile.NamedTemporaryFile(mode='wt', dir=pkg_resources.resource_filename('fetch_block_construction', 'envs/robotics/assets/fetch'), delete=False, suffix=".xml") as fp:
-            fp.write(generate_multi_camera_xml(self.num_blocks, robot, task='pick_place'))
+            fp.write(generate_multi_camera_xml(self.num_blocks, robot, task='pick_place', target_size=self.target_size, object_size=self.object_size))
             MODEL_XML_PATH = fp.name
 
         fetch_env.FetchEnv.__init__(
             self, MODEL_XML_PATH, has_object=True, block_gripper=False, n_substeps=20,
             gripper_extra_height=0.2, target_in_the_air=True, target_offset=0.0,
-            obj_range=0.15, target_range=0.15, distance_threshold=0.05,
+            obj_range=0.15, target_range=0.15, distance_threshold=self.target_size + self.object_size,
             initial_qpos=initial_qpos, reward_type=reward_type, obs_type=obs_type, render_size=render_size)
         gym_utils.EzPickle.__init__(self, reward_type, obs_type, render_size)
 
@@ -215,7 +217,7 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             object_xypos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
                                                                                   size=2)
 
-            while not np.all([np.linalg.norm(object_xypos - other_xpos) >= 0.06 for other_xpos in prev_obj_xpos]):
+            while not np.all([np.linalg.norm(object_xypos - other_xpos) >= 2 * np.sqrt(2) * self.object_size for other_xpos in prev_obj_xpos]):
                 object_xypos = self.initial_gripper_xpos[:2] + self.np_random.uniform(-self.obj_range, self.obj_range,
                                                                                       size=2)
 
@@ -232,7 +234,7 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def _sample_goal(self):
         goal = self.sim.data.get_joint_qpos(F"{self.object_names[0]}:joint")[:3]
         object_positions = [self.sim.data.get_joint_qpos(F"{obj_name}:joint") for obj_name in self.object_names]
-        while not (np.all([np.linalg.norm(goal - other_xpos[:3]) >= 0.06 for other_xpos in object_positions])):
+        while not (np.all([np.linalg.norm(goal - other_xpos[:3]) >= self.target_size + np.sqrt(2) * self.object_size for other_xpos in object_positions])):
             goal = self.initial_gripper_xpos[:3] + self.np_random.uniform(-self.target_range, self.target_range, size=3)
             goal += self.target_offset
             goal[2] = self.height_offset
