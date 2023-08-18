@@ -25,7 +25,11 @@ class ReachPickPlaceTargetParser(argparse.ArgumentParser):
         self.add_argument("--case", type=str, choices=["Specific", "Distinct"], default="Specific",
                           help="The case to run. Must be one of 'Specific' or 'Distinct'.")
         self.add_argument("--num_distractors", type=int, default=2,
-                          help="The number of distractors in the environment. Must be between 1 and 25.")
+                          help="The number of distractors in the environment. Must be between 0 and 17.")
+        self.add_argument("--target_size", type=str, choices=["small", "medium", "large"], default="small",
+                          help="Size of the targets.")
+        self.add_argument("--object_size", type=str, choices=["small", "medium", "large"], default="small",
+                          help="Size of the objects.")
         self.add_argument("--robot", type=str, choices=["default", "simplified"], default="simplified",
                           help="Robot model to use.")
         self.add_argument("--viewpoint", type=str, choices=["frontview", "topview", "external_camera_0"], default="frontview",
