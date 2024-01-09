@@ -49,11 +49,11 @@ base = '''
 </mujoco>
 '''
 
-def generate_multi_camera_xml(num_blocks: int, robot: str, task='vbb', target_size=0.02, object_size=0.025):
+def generate_multi_camera_xml(num_blocks: int, robot: str, task='vbb', target_size=0.02, object_size=0.025, num_targets=0):
     if num_blocks <= (6 if not task == 'reach' else 5):
-        colors = BASIC_COLORS[:num_blocks]
+        colors = BASIC_COLORS[:max(num_blocks, num_targets)]
     else:
-        colors = get_colors(num_blocks)
+        colors = get_colors(max(num_blocks, num_targets))
 
     site_base = '<site name="target{id}" pos="0 0 0.5" size="{target_size} {target_size} {target_size}" rgba="{color} 0.3" type="sphere"></site>' \
         if not task == 'reach' else '<site name="distractor{id}" pos="0 0 0.5" size="{target_size} {target_size} {target_size}" rgba="{color} 1" type="sphere"></site>'
@@ -88,6 +88,10 @@ def generate_multi_camera_xml(num_blocks: int, robot: str, task='vbb', target_si
                 sites.append(site_base.format(**dict(id=i, target_size=target_size, color=colors[i])))
             block_bodies.append(block_base.format(**dict(id=i, object_size=object_size)))
             assets.append(asset_base.format(**dict(id=i, color=colors[i])))
+
+    if task == 'render':
+        for i in range(num_targets):
+            sites.append(site_base.format(**dict(id=i, target_size=target_size, color=colors[i])))
 
     return base.format(**dict(assets="\n".join(assets), target_sites="\n".join(sites), robot_file=robot_file, object_bodies="\n".join(block_bodies))) \
         if not task == 'reach' else base.format(**dict(assets="", target_sites="\n".join(sites), robot_file=robot_file, object_bodies=""))
