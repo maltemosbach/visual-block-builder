@@ -70,6 +70,7 @@ fi
 
 # Add additional assets.
 cp ./visual_block_builder/assets/simplified_robot.xml ./src/fetch-block-construction/fetch_block_construction/envs/robotics/assets/fetch/
+cp ./visual_block_builder/assets/robot.xml ./src/fetch-block-construction/fetch_block_construction/envs/robotics/assets/fetch/
 
 # Install the Python package.
 pip install -e .

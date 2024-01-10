@@ -13,6 +13,7 @@ setup(
             "opencv-python",
             "pynput",
             "tabulate",
-            "tqdm"
+            "tqdm",
+            "numpy==1.24.3"
         ],
     )
