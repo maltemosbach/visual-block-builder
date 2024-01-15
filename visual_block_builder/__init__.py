@@ -66,7 +66,7 @@ for num_distractors in range(0, 18):
                             id='ReachSpecificTarget_{}Distractors_{}Targets_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [num_distractors, size, reward_type, obs_type, viewpoint, robot]]),
                             entry_point='visual_block_builder.env:ReachTargetEnv',
                             kwargs=kwargs,
-                            max_episode_steps=100,
+                            max_episode_steps=50,
                         )
 
 for num_distractors in range(2, 18):
@@ -96,7 +96,7 @@ for num_distractors in range(2, 18):
                             id='ReachDistinctTarget_{}Distractors_{}Targets_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [num_distractors, size, reward_type, obs_type, viewpoint, robot]]),
                             entry_point='visual_block_builder.env:ReachTargetEnv',
                             kwargs=kwargs,
-                            max_episode_steps=100,
+                            max_episode_steps=50,
                         )
 
 for num_distractors in range(0, 18):
@@ -198,7 +198,7 @@ for num_blocks in range(3, 18):
                                 id='PickAndPlaceDistinctBlock_{}Blocks_{}Target_{}Objects_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [num_blocks, target_size, object_size, reward_type, obs_type, viewpoint, robot]]),
                                 entry_point='visual_block_builder.env:PickAndPlaceBlockEnv',
                                 kwargs=kwargs,
-                                max_episode_steps=200,
+                                max_episode_steps=100,
                             )
 
 for num_blocks in range(1, 18):
