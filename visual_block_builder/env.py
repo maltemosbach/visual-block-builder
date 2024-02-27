@@ -196,12 +196,24 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         return 0
 
     def compute_reward_image(self):
-        distractor_dist = self.check_distractor_dist()
         return super().compute_reward_image()
 
     def compute_reward(self, achieved_goal, goal, info):
-        distractor_dist = self.check_distractor_dist()
-        return super().compute_reward(achieved_goal, goal, info)
+        grip_pos = self.sim.data.get_site_xpos('robot0:grip')
+
+        reward = 0
+        for i in range(self.num_distractors):
+            reward -= (0.1 * np.exp(-20 * np.linalg.norm(grip_pos.copy() - self.sim.data.get_site_xpos(f'distractor{i}').copy())))
+
+        goal_dist = -super().compute_reward(achieved_goal, goal, info)
+        reward += np.exp(-20 * goal_dist)
+
+        return reward
+
+    def success(self):
+        grip_pos = self.sim.data.get_site_xpos('robot0:grip')
+        d = np.linalg.norm(grip_pos.copy() - self.sim.data.get_site_xpos(f'target0').copy())
+        return d < 0.05
 
 
 class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
@@ -332,9 +344,12 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         return goal.copy()
 
     def compute_reward(self, achieved_goal, goal, info):
-        grip_dist = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos('object0')).copy() - np.squeeze(self.sim.data.get_site_xpos('robot0:grip')).copy())
-        return max(super().compute_reward(achieved_goal, goal, info), -0.5) + 0.5 * max(-grip_dist, -0.5)
+        goal_dist = -super().compute_reward(achieved_goal, goal, info)
+        return np.exp(-10 * goal_dist)
 
+    def success(self):
+        d = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos(f'target0').copy()) - np.squeeze(self.sim.data.get_site_xpos('object0'))).copy()
+        return d < 0.1
 
 class PickAndPlaceSortEnv(FetchBlockConstructionEnv):
     def __init__(self, initial_qpos: Dict[str, Any], num_blocks: int = 1, reward_type: str = "incremental",
