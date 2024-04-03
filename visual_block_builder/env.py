@@ -1,3 +1,5 @@
+import random
+
 import numpy as np
 from fetch_block_construction.envs.robotics.fetch.construction import FetchBlockConstructionEnv
 from fetch_block_construction.envs.robotics import fetch_env
@@ -8,6 +10,23 @@ import tempfile
 from typing import Dict, Any
 from visual_block_builder.assets.generate_multi_camera_xml import generate_multi_camera_xml
 from mujoco_py.generated import const
+
+COLORS = np.array([(0, 255, 0),
+                   (47, 79, 79),
+                   (139, 69, 19),
+                   (25, 25, 112),
+                   (0, 100, 0),
+                   (189, 183, 107),
+                   (72, 209, 204),
+                   (255, 0, 0),
+                   (255, 165, 0),
+                   (255, 255, 0),
+                   (199, 21, 133),
+                   (0, 0, 205),
+                   (0, 250, 154),
+                   (216, 191, 216),
+                   (255, 0, 255),
+                   (30, 144, 255)]) / 255
 
 
 class VisualBlockBuilderEnv(FetchBlockConstructionEnv):
@@ -215,6 +234,10 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         d = np.linalg.norm(grip_pos.copy() - self.sim.data.get_site_xpos(f'target0').copy())
         return d < 0.05
 
+    def dist(self):
+        grip_pos = self.sim.data.get_site_xpos('robot0:grip')
+        return np.linalg.norm(grip_pos.copy() - self.sim.data.get_site_xpos(f'target0').copy())
+
 
 class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def __init__(self, initial_qpos: Dict[str, Any], reward_type='sparse', obs_type='np', render_size=42,
@@ -279,28 +302,19 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 
         # Randomize color of objects
         if self.case == 'Distinct':
-            target_object_color = self.np_random.randint(0, 256, size=3)
-            self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = target_object_color / 255
+            colors = random.sample(range(len(COLORS)), 2)
 
-            color_dist = 0
-            while color_dist < 100:
-                distractor_object_color = self.np_random.randint(0, 256, size=3)
-                color_dist = np.linalg.norm(target_object_color - distractor_object_color)
+            self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = COLORS[colors[0]]
 
             for object_name in self.object_names[1:]:
-                self.sim.model.geom_rgba[self.sim.model.geom_name2id(object_name)][:3] = distractor_object_color / 255
+                self.sim.model.geom_rgba[self.sim.model.geom_name2id(object_name)][:3] = COLORS[colors[1]]
+
         # Randomize colors of distractors
         elif self.case == 'Specific':
-           target_object_color = np.array([0, 255, 0])
-           self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = target_object_color / 255
+           self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = COLORS[0]
 
            for i in range(self.num_blocks - 1):
-               color_dist = 0
-               while color_dist < 100:
-                   distractor_object_color = self.np_random.randint(0, 256, size=3)
-                   color_dist = np.linalg.norm(target_object_color - distractor_object_color)
-
-               self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[i+1])][:3] = distractor_object_color / 255
+               self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[i+1])][:3] = COLORS[random.randrange(1, len(COLORS))]
         else:
            target_object_color = np.array([0, 255, 0])
            self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = target_object_color / 255
@@ -344,12 +358,16 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         return goal.copy()
 
     def compute_reward(self, achieved_goal, goal, info):
+        grip_dist = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos('object0')).copy() - np.squeeze(self.sim.data.get_site_xpos('robot0:grip')).copy())
         goal_dist = -super().compute_reward(achieved_goal, goal, info)
-        return np.exp(-10 * goal_dist)
+        return np.exp(-10 * goal_dist) + 0.1 * np.exp(-10 * grip_dist)
 
     def success(self):
         d = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos(f'target0').copy()) - np.squeeze(self.sim.data.get_site_xpos('object0'))).copy()
-        return d < 0.1
+        return d < 0.05
+
+    def dist(self):
+        return np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos(f'target0').copy()) - np.squeeze(self.sim.data.get_site_xpos('object0'))).copy()
 
 class PickAndPlaceSortEnv(FetchBlockConstructionEnv):
     def __init__(self, initial_qpos: Dict[str, Any], num_blocks: int = 1, reward_type: str = "incremental",
