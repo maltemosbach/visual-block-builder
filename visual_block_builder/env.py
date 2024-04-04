@@ -302,7 +302,7 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 
         # Randomize color of objects
         if self.case == 'Distinct':
-            colors = random.sample(range(len(COLORS)), 2)
+            colors = np.random.choice(range(len(COLORS)), size=2, replace=False)
 
             self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = COLORS[colors[0]]
 
@@ -314,7 +314,7 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
            self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = COLORS[0]
 
            for i in range(self.num_blocks - 1):
-               self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[i+1])][:3] = COLORS[random.randrange(1, len(COLORS))]
+               self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[i+1])][:3] = COLORS[np.random.randint(1, len(COLORS))]
         else:
            target_object_color = np.array([0, 255, 0])
            self.sim.model.geom_rgba[self.sim.model.geom_name2id(self.object_names[0])][:3] = target_object_color / 255
