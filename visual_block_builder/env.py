@@ -360,10 +360,7 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def compute_reward(self, achieved_goal, goal, info):
         grip_dist = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos('object0')).copy() - np.squeeze(self.sim.data.get_site_xpos('robot0:grip')).copy())
         goal_dist = -super().compute_reward(achieved_goal, goal, info)
-        if grip_dist < 0.05:
-            return 0.9 * np.exp(-20 * goal_dist) + 0.1 * np.exp(-10 * grip_dist)
-        else:
-            return 0.1 * np.exp(-10 * grip_dist)
+        return 0.9 * np.exp(-20 * goal_dist) + 0.1 * np.exp(-10 * grip_dist)
 
     def success(self):
         d = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos(f'target0').copy()) - np.squeeze(self.sim.data.get_site_xpos('object0'))).copy()
