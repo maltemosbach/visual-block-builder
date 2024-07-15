@@ -138,30 +138,26 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 
         # Randomize color of target and distractors
         if self.case == 'Distinct':
-            target_color = self.np_random.randint(0, 256, size=3)
-            self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = target_color / 255
+            colors = self.np_random.choice(range(len(COLORS)), size=2, replace=False)
 
-            color_dist = 0
-            while color_dist < 100:
-                distractor_color = self.np_random.randint(0, 256, size=3)
-                color_dist = np.linalg.norm(target_color - distractor_color)
+            self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = COLORS[colors[0]]
 
             for i in range(self.num_distractors):
-                self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = distractor_color / 255
+                self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = COLORS[colors[1]]
         # Randomize colors of distractors
         elif self.case == 'Specific':
            target_color = np.array([255, 0, 0])
            self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = target_color / 255
 
-           for i in range(self.num_distractors):
-               color_dist = 0
-               while color_dist < 100:
-                   distractor_color = self.np_random.randint(0, 256, size=3)
-                   color_dist = np.linalg.norm(target_color - distractor_color)
+           def generate_number_excluding_7(max_number):
+               numbers = np.arange(max_number)  # Create an array with numbers from 0 to max_number
+               numbers = np.delete(numbers, 7)  # Remove the number 7 from the array
+               return self.np_random.choice(numbers)  # Randomly choose a number from the array
 
-               self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = distractor_color / 255
+           for i in range(self.num_distractors):
+               self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = COLORS[generate_number_excluding_7(len(COLORS))]
         else:
-           target_color =  self.np_random.randint(0, 256, size=3)
+           target_color = self.np_random.randint(0, 256, size=3)
            self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = target_color / 255
 
            for i in range(self.num_distractors):
@@ -218,16 +214,8 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         return super().compute_reward_image()
 
     def compute_reward(self, achieved_goal, goal, info):
-        grip_pos = self.sim.data.get_site_xpos('robot0:grip')
-
-        reward = 0
-        for i in range(self.num_distractors):
-            reward -= (0.1 * np.exp(-20 * np.linalg.norm(grip_pos.copy() - self.sim.data.get_site_xpos(f'distractor{i}').copy())))
-
         goal_dist = -super().compute_reward(achieved_goal, goal, info)
-        reward += np.exp(-20 * goal_dist)
-
-        return reward
+        return np.exp(-20 * goal_dist)
 
     def success(self):
         grip_pos = self.sim.data.get_site_xpos('robot0:grip')
@@ -242,7 +230,8 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
     def __init__(self, initial_qpos: Dict[str, Any], reward_type='sparse', obs_type='np', render_size=42,
                  num_blocks: int = 1, case: str = "Specific", viewpoint: str = "topview", robot: str = "default",
-                 width: int = 1024, height: int = 1024, target_size="small", object_size="small"):
+                 width: int = 1024, height: int = 1024, target_size="small", object_size="small",
+                 target_in_the_air=True, block_gripper=False):
 
         self.num_blocks = num_blocks
         self.viewpoint = viewpoint
@@ -258,8 +247,8 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             MODEL_XML_PATH = fp.name
 
         fetch_env.FetchEnv.__init__(
-            self, MODEL_XML_PATH, has_object=True, block_gripper=False, n_substeps=20,
-            gripper_extra_height=0.2, target_in_the_air=True, target_offset=0.0,
+            self, MODEL_XML_PATH, has_object=True, block_gripper=block_gripper, n_substeps=20,
+            gripper_extra_height=0.2, target_in_the_air=target_in_the_air, target_offset=0.0,
             obj_range=0.15, target_range=0.15, distance_threshold=self.target_size + self.object_size,
             initial_qpos=initial_qpos, reward_type=reward_type, obs_type=obs_type, render_size=render_size)
         gym_utils.EzPickle.__init__(self, reward_type, obs_type, render_size)
@@ -359,7 +348,7 @@ class PickAndPlaceBlockEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 
     def compute_reward(self, achieved_goal, goal, info):
         grip_dist = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos('object0')).copy() - np.squeeze(self.sim.data.get_site_xpos('robot0:grip')).copy())
-        goal_dist = -super().compute_reward(achieved_goal, goal, info)
+        goal_dist = np.linalg.norm(np.squeeze(self.sim.data.get_site_xpos('object0')).copy() - np.squeeze(self.sim.data.get_site_xpos('target0')).copy())
         return 0.9 * np.exp(-20 * goal_dist) + 0.1 * np.exp(-10 * grip_dist)
 
     def success(self):
