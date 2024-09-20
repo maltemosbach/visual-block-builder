@@ -10,6 +10,9 @@ import tempfile
 from typing import Dict, Any
 from visual_block_builder.assets.generate_multi_camera_xml import generate_multi_camera_xml
 from mujoco_py.generated import const
+from colormath.color_objects import sRGBColor, LabColor
+from colormath.color_conversions import convert_color
+
 
 COLORS = np.array([(0, 255, 0),
                    (47, 79, 79),
@@ -29,9 +32,78 @@ COLORS = np.array([(0, 255, 0),
                    (30, 144, 255)]) / 255
 
 
+def delta_e_cie2000(lab1, lab2, kL=1, kC=1, kH=1):
+    L1, a1, b1 = lab1.lab_l, lab1.lab_a, lab1.lab_b
+    L2, a2, b2 = lab2.lab_l, lab2.lab_a, lab2.lab_b
+
+    C1 = np.sqrt(a1 ** 2 + b1 ** 2)
+    C2 = np.sqrt(a2 ** 2 + b2 ** 2)
+    C_ave = (C1 + C2) / 2
+
+    G = 0.5 * (1 - np.sqrt(C_ave ** 7 / (C_ave ** 7 + 25 ** 7)))
+
+    L1_, L2_ = L1, L2
+    a1_, a2_ = (1 + G) * a1, (1 + G) * a2
+    b1_, b2_ = b1, b2
+
+    C1_ = np.sqrt(a1_ ** 2 + b1_ ** 2)
+    C2_ = np.sqrt(a2_ ** 2 + b2_ ** 2)
+
+    h1_ = np.degrees(np.arctan2(b1_, a1_)) % 360
+    h2_ = np.degrees(np.arctan2(b2_, a2_)) % 360
+
+    delta_L = L2_ - L1_
+    delta_C = C2_ - C1_
+    delta_h = h2_ - h1_
+    if abs(delta_h) > 180:
+        if h2_ <= h1_:
+            delta_h += 360
+        else:
+            delta_h -= 360
+    delta_H = 2 * np.sqrt(C1_ * C2_) * np.sin(np.radians(delta_h) / 2)
+
+    L_ave = (L1_ + L2_) / 2
+    C_ave = (C1_ + C2_) / 2
+
+    h_ave = h1_ + h2_
+    if abs(h1_ - h2_) > 180:
+        h_ave += 360
+    h_ave /= 2
+
+    T = (1 - 0.17 * np.cos(np.radians(h_ave - 30)) +
+         0.24 * np.cos(np.radians(2 * h_ave)) +
+         0.32 * np.cos(np.radians(3 * h_ave + 6)) -
+         0.20 * np.cos(np.radians(4 * h_ave - 63)))
+
+    delta_theta = 30 * np.exp(-((h_ave - 275) / 25) ** 2)
+
+    R_C = 2 * np.sqrt(C_ave ** 7 / (C_ave ** 7 + 25 ** 7))
+    S_L = 1 + (0.015 * (L_ave - 50) ** 2) / np.sqrt(20 + (L_ave - 50) ** 2)
+    S_C = 1 + 0.045 * C_ave
+    S_H = 1 + 0.015 * C_ave * T
+    R_T = -np.sin(np.radians(2 * delta_theta)) * R_C
+
+    delta_E = np.sqrt(
+        (delta_L / (kL * S_L)) ** 2 +
+        (delta_C / (kC * S_C)) ** 2 +
+        (delta_H / (kH * S_H)) ** 2 +
+        R_T * (delta_C / (kC * S_C)) * (delta_H / (kH * S_H))
+    )
+
+    return delta_E
+
+
+def delta_e_2000_to_red(color):
+    red = sRGBColor(1.0, 0.0, 0.0)
+    color_rgb = sRGBColor(color[0], color[1], color[2])
+    color_lab = convert_color(color_rgb, LabColor)
+    red_lab = convert_color(red, LabColor)
+    return delta_e_cie2000(red_lab, color_lab)
+
+
 class VisualBlockBuilderEnv(FetchBlockConstructionEnv):
     def __init__(self, initial_qpos: Dict[str, Any], num_blocks: int = 1, reward_type: str = "incremental",
-                    obs_type: str = "np", stack_only: bool = False, case: str = "Singletower", viewpoint: str = "topview", 
+                    obs_type: str = "np", stack_only: bool = False, case: str = "Singletower", viewpoint: str = "topview",
                     robot: str = "default", width: int = 1024, height: int = 1024) -> None:
         self.num_blocks = num_blocks
         self.object_names = ['object{}'.format(i) for i in range(self.num_blocks)]
@@ -156,6 +228,23 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
 
            for i in range(self.num_distractors):
                self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = COLORS[generate_number_excluding_7(len(COLORS))]
+
+        elif self.case == 'SpecificRelative':
+           # Sample as many colors as there are targets (real target + distractors)
+           num_colors = 1 + self.num_distractors
+           sampled_colors = COLORS[np.random.choice(range(len(COLORS)), size=num_colors, replace=False)]
+
+           # Find the reddest color using Delta E 2000
+           reddest_color = min(sampled_colors, key=lambda color: delta_e_2000_to_red(color))
+
+           # Assign the reddest color to the target
+           self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = reddest_color
+
+           # Assign the other colors to distractors
+           distractor_colors = [c for c in sampled_colors if not np.array_equal(c, reddest_color)]
+           for i in range(self.num_distractors):
+               self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = distractor_colors[i]
+
         else:
            target_color = self.np_random.randint(0, 256, size=3)
            self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = target_color / 255
@@ -163,7 +252,6 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
            for i in range(self.num_distractors):
                distractor_color = self.np_random.randint(0, 256, size=3)
                self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = distractor_color / 255
-
 
         # Randomize start position of distractors.
         sites_offset = (self.sim.data.site_xpos - self.sim.model.site_pos).copy()
