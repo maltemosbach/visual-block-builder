@@ -240,7 +240,7 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
         elif self.case == 'SpecificRelative':
            # Sample as many colors as there are targets (real target + distractors)
            num_colors = 1 + self.num_distractors
-           sampled_colors = COLORS[np.random.choice(range(len(COLORS)), size=num_colors, replace=False)]
+           sampled_colors = COLORS[self.np_random.choice(range(len(COLORS)), size=num_colors, replace=False)]
 
            # Find the reddest color using Delta E 2000
            reddest_color = min(sampled_colors, key=lambda color: delta_e_2000_to_red(color))
