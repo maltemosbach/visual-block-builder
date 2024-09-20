@@ -131,6 +131,37 @@ for num_distractors in range(2, 18):
                             max_episode_steps=50,
                         )
 
+
+for num_distractors in range(4, 18):
+    for reward_type in ['sparse', 'dense']:
+        for obs_type in ['dictimage', 'np', 'dictstate']:
+            for viewpoint in ["frontview", "topview", "external_camera_0"]:
+                for robot in ["default", "simplified"]:
+                    for size in ["small", "medium", "large"]:
+                        initial_qpos = {
+                            'robot0:slide0': 0.405,
+                            'robot0:slide1': 0.48,
+                            'robot0:slide2': 0.0,
+                        }
+
+                        kwargs = {
+                            'reward_type': reward_type,
+                            'initial_qpos': initial_qpos,
+                            'num_distractors': num_distractors,
+                            'obs_type': obs_type,
+                            'case': 'DistinctGroups',
+                            'viewpoint': viewpoint,
+                            'robot': robot,
+                            'target_size': size,
+                        }
+
+                        register(
+                            id='ReachDistinctGroupsTarget_{}Distractors_{}Targets_{}Reward_{}Obs_{}Viewpoint{}Robot-v1'.format(*[kwarg.title() if isinstance(kwarg, str) else kwarg for kwarg in [num_distractors, size, reward_type, obs_type, viewpoint, robot]]),
+                            entry_point='visual_block_builder.env:ReachTargetEnv',
+                            kwargs=kwargs,
+                            max_episode_steps=50,
+                        )
+
 for num_distractors in range(0, 18):
     for reward_type in ['sparse', 'dense']:
         for obs_type in ['dictimage', 'np', 'dictstate']:
