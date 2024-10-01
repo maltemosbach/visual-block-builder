@@ -217,7 +217,7 @@ class ReachTargetEnv(fetch_env.FetchEnv, gym_utils.EzPickle):
             for i in range(self.num_distractors):
                 self.sim.model.site_rgba[self.sim.model.site_name2id(f'distractor{i}')][:3] = COLORS[colors[1]]
 
-        if self.case == 'DistinctGroups':
+        elif self.case == 'DistinctGroups':
             colors = self.np_random.choice(range(len(COLORS)), size=3, replace=False)
 
             self.sim.model.site_rgba[self.sim.model.site_name2id('target0')][:3] = COLORS[colors[0]]
